@@ -284,6 +284,31 @@ const MoneyManager = () => {
     URL.revokeObjectURL(url);
   };
 
+  // 取引削除用関数
+  const handleDeleteTransaction = async (id: number) => {
+    if (!user) return;
+    if (!window.confirm("この取引を削除しますか？")) return;
+
+    setIsLoading(true);
+    try {
+      await apiCall(`/api/transactions/${id}?userId=${user.id}`, {
+        method: "DELETE",
+      });
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
+      // 残高も再計算
+      const updated = transactions.filter((t) => t.id !== id);
+      const total = updated.reduce((sum, t) => {
+        return t.type === "income" ? sum + t.amount : sum - t.amount;
+      }, 0);
+      setBalance(total);
+    } catch (error) {
+      console.error("取引削除エラー:", error);
+      alert("削除に失敗しました");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (!user) {
     return <LoginForm />;
   }
@@ -449,14 +474,23 @@ const MoneyManager = () => {
                 </p>
               </CardHeader>
               <CardContent>
-                <p
-                  className={`text-lg font-bold ${
-                    t.type === "income" ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {t.type === "income" ? "+" : "-"}
-                  {t.amount.toLocaleString()}円
-                </p>
+                <div className="flex items-center justify-between">
+                  <p
+                    className={`text-lg font-bold ${
+                      t.type === "income" ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {t.type === "income" ? "+" : "-"}
+                    {t.amount.toLocaleString()}円
+                  </p>
+                  <button
+                    onClick={() => handleDeleteTransaction(t.id)}
+                    disabled={isLoading}
+                    className="ml-4 px-3 py-1 bg-red-400 text-white rounded hover:bg-red-600"
+                  >
+                    削除
+                  </button>
+                </div>
               </CardContent>
             </Card>
           ))
